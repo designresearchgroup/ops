@@ -280,9 +280,10 @@ const FIT_TOOL = {
         },
         required: ['risk', 'likely_internal', 'ghost_or_fake', 'signals', 'recommendation']
       },
+      template_response: { type: 'string', description: 'A ready-to-send outreach/application message the user can copy and send NOW — 4–6 short sentences, plain and human, moat-led, honest about any gap, tuned to this specific opportunity. Sign "James." Empty string only if the verdict is skip.' },
       clarifiers: { type: 'array', items: { type: 'string' }, description: 'Questions to ask the candidate before generating, when a requirement needs a fact not in the profile. Empty if none.' }
     },
-    required: ['parsed', 'primary_frame', 'verdict', 'verdict_reason', 'strong_fits', 'gaps', 'flags', 'keywords', 'donthave_required', 'cash', 'authenticity', 'clarifiers']
+    required: ['parsed', 'primary_frame', 'verdict', 'verdict_reason', 'strong_fits', 'gaps', 'flags', 'keywords', 'donthave_required', 'cash', 'authenticity', 'template_response', 'clarifiers']
   }
 };
 
@@ -415,10 +416,10 @@ function section(title) {
   return s;
 }
 function fmtUSD(n) {
-  n = Number(n) || 0;
+  n = Math.round(Number(n) || 0);
   if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 ? 1 : 0).replace(/\.0$/, '') + 'M';
-  if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
-  return '$' + Math.round(n);
+  if (n >= 10000) return '$' + Math.round(n / 1000) + 'K';   // 10k+ → compact
+  return '$' + n.toLocaleString();                            // hundreds/thousands → exact ($1,750, $850)
 }
 function probClass(p) { return p >= 55 ? 'ok' : p >= 30 ? 'warn' : 'bad'; }
 function renderCash(root, cash) {
@@ -804,9 +805,10 @@ function renderSettings() {
   $('#sb-url').value = c ? c.url : '';
   $('#sb-key').value = c ? c.key : '';
   $('#sb-dot').className = 'dot ' + (c ? 'ok' : 'no');
-  $('#sb-status').textContent = c ? 'Connected — pipeline synced to Postgres' : 'Local only — pipeline stored in this browser';
+  $('#sb-status').textContent = c ? 'Connected — data synced to Postgres' : 'Local only — data stored in this browser';
   updateProxyNote();
   updateKeyStatus();
+  renderProfile();   // guardrails + canonical profile now live in Settings
 }
 function updateProxyNote() {
   const note = $('#proxy-endpoint'); if (!note) return;
@@ -1107,7 +1109,8 @@ function renderPreview() {
   const e = el('div', { class: 'pv-empty' });
   e.append(el('div', { class: 'pv-ic', html: IC.doc }));
   e.append(el('div', { style: 'font-weight:650;color:var(--text)' }, 'Your preview shows up here'));
-  e.append(el('div', { class: 'small' }, 'Attach your résumé PDF and paste an opportunity on the left. Giggy gives you an honest read — the cash it’s worth and whether to go for it — then drafts a tailored, ATS-safe résumé you can save as PDF.'));
+  e.append(el('div', { class: 'small' }, 'Attach your résumé PDF and paste an opportunity on the left. Giggy gives you an honest read — the cash it’s worth and whether it’s worth your time — then drafts a tailored, ATS-safe résumé you can save as PDF.'));
+  e.append(renderSources());
   p.append(e);
 }
 function rateBtn() {
@@ -1120,8 +1123,14 @@ function previewOpinion(p, a) {
     el('span', { class: 'grow' }),
     el('span', { class: 'small muted' }, (a.parsed && a.parsed.company) || '')));
   if (a.verdict_reason) p.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, a.verdict_reason));
-  if (a.cash) { const s = renderCash(p, a.cash); }
+  if (a.cash) renderCash(p, a.cash);
   if (a.authenticity) renderAuthenticity(p, a.authenticity);
+  if (a.template_response && a.verdict !== 'skip') {
+    const sec = section('Ready-to-send response');
+    sec.append(el('div', { class: 'pv-plain', style: 'font-family:var(--sans)' }, a.template_response));
+    sec.append(el('div', { class: 'btnrow', style: 'margin-top:10px' }, el('button', { class: 'btn sm', onclick: () => copyText(a.template_response) }, ico(IC.copy), 'Copy')));
+    p.append(sec);
+  }
   const row = el('div', { class: 'btnrow', style: 'margin-top:16px' });
   if (a.verdict !== 'skip') row.append(el('button', { class: 'btn ok', onclick: tailorResume }, ico(IC.doc), 'Tailor my résumé'));
   row.append(el('button', { class: 'btn', onclick: () => { state.lastAnalysis = null; renderPreview(); } }, 'Back'));
@@ -1146,7 +1155,7 @@ async function rateOpportunity() {
     const resp = await callClaude({
       system: buildSystemPrompt(), max_tokens: 3000,
       tools: [FIT_TOOL], tool_choice: { type: 'tool', name: 'submit_fit_analysis' },
-      messages: [{ role: 'user', content: `Give your honest read on this opportunity for this candidate — fit, the per-opportunity cash rating (what it pays and the odds it converts), red flags, and the angle to lead with.${resume}\n\nOPPORTUNITY:\n${iv.jd}` }]
+      messages: [{ role: 'user', content: `Give your honest read on this opportunity for this candidate — radically prioritized: if it's not clearly worth their time, say skip. Include fit, the per-opportunity cash rating (what it pays and the odds it converts), red flags, the angle to lead with, and a ready-to-send template response they can copy and send now (unless it's a skip).${resume}\n\nOPPORTUNITY:\n${iv.jd}` }]
     });
     state.lastAnalysis = toolResult(resp, 'submit_fit_analysis');
     renderPreview();
@@ -1185,8 +1194,33 @@ const CHAT_CHIPS = [
   'Is this one worth my time?',
   'What is it really worth in cash?',
   'What are the red flags here?',
-  'How should I position myself for it?'
+  'Where should I look for these?'
 ];
+function sourceQuery() {
+  const t = (state.profile.targetRoles || ['AI Product Manager'])[0] || 'AI Product Manager';
+  return encodeURIComponent(t);
+}
+function SOURCES() {
+  const q = sourceQuery();
+  return [
+    { name: 'LinkedIn', url: 'https://www.linkedin.com/jobs/search/?keywords=' + q },
+    { name: 'Indeed', url: 'https://www.indeed.com/jobs?q=' + q },
+    { name: 'Glassdoor', url: 'https://www.glassdoor.com/Job/jobs.htm?sc.keyword=' + q },
+    { name: 'Dice', url: 'https://www.dice.com/jobs?q=' + q },
+    { name: 'Wellfound', url: 'https://wellfound.com/jobs' },
+    { name: 'Upwork · gigs', url: 'https://www.upwork.com/nx/search/jobs/?q=' + q },
+    { name: 'Contra · freelance', url: 'https://contra.com/opportunities' }
+  ];
+}
+function renderSources() {
+  const wrap = el('div', { class: 'src-wrap' });
+  wrap.append(el('div', { class: 'src-lbl' }, 'Where to find opportunities'));
+  const row = el('div', { class: 'src-row' });
+  SOURCES().forEach(s => row.append(el('a', { class: 'src-chip', href: s.url, target: '_blank', rel: 'noopener' }, s.name)));
+  wrap.append(row);
+  wrap.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, 'Go direct to the employer where you can — skip the agency reposts. Paste anything promising back here and I\'ll tell you if it\'s worth your time.'));
+  return wrap;
+}
 function chatGreeting() {
   return { role: 'assistant', content: "I'm Giggy — twenty years hustling contracts and freelance gigs, and I've placed a lot of people. Paste your résumé and the opportunity (a job post or a gig) and I'll give you my honest read: is it worth your time, what it's really worth in cash, and how to position you to win it. Then we sharpen the résumé together.\n\nDrop the opportunity and your résumé PDF above, or just paste them here." };
 }
@@ -1212,6 +1246,12 @@ When the user gives an opportunity + résumé, reply with your OPINION, tight an
 - Cash rating for THIS opportunity: realistic cash it pays if landed (a gig/contract is usually hundreds to a few thousand dollars; use the posted pay if there is one) and an honest percent chance it converts to cash. Cut that percent hard for ghost/fake/evergreen/wired-for-an-insider postings.
 - Red flags in the posting (ghost job, fake, agency reposting, likely already-filled internally).
 - How to position them: the one angle to lead with, and the gaps to handle honestly — never invent facts or claim a DON'T-HAVE skill; scope precisely (Hummer EV = concept design; Apple = producer; SCE under Quigley-Simpson; robotics = ran the UI/delivery, not built the robot).
+RADICAL PRIORITIZATION — NO TIME-WASTERS
+You hate wasted effort. Radically prioritize: if an opportunity isn't clearly worth their time, say skip and move on — don't hedge. Rank ruthlessly by cash × odds of converting. Call out ghost jobs, wired-for-an-insider postings, agency reposts, and dead evergreen listings fast, and tell them not to bother — or exactly how to get around the front door (apply direct, find a referral). When something IS worth it, hand them a ready-to-send template response so they can act in one move.
+
+WHERE TO SOURCE
+When they ask where to find opportunities, point them at the right places for their target roles and gigs: LinkedIn, Indeed, Glassdoor, Dice, Wellfound, and for contract/freelance work Upwork and Contra, plus company career pages. Prefer direct-employer postings over agency reposts.
+
 Then help them work through it and update the résumé. Keep replies short and human — a few sentences or tight bullets, the way a sharp mentor talks. Ask a question back when you genuinely need one fact to give a better read.`;
 }
 
@@ -1548,7 +1588,7 @@ function init() {
   }));
   $('#btn-save-profile').addEventListener('click', saveProfile);
   $('#btn-reset-profile').addEventListener('click', resetProfile);
-  $('#btn-reset-tracker-2').addEventListener('click', resetTracker);
+  const resetBtn = $('#btn-reset-tracker-2'); if (resetBtn) resetBtn.addEventListener('click', resetTracker);
   $('#btn-trends').addEventListener('click', runTrends);
   $('#btn-sb-save').addEventListener('click', saveSupabase);
   $('#btn-sb-clear').addEventListener('click', () => { SB.setConfig('', ''); renderSettings(); toast('Supabase disconnected.'); });

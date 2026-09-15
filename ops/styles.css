@@ -526,3 +526,10 @@ kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-3); b
 .pv-head .grow { flex: 1; }
 .pv-section { margin-top: 16px; }
 .pv-plain { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 18px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; max-height: 60vh; overflow: auto; font-family: Calibri, Arial, sans-serif; }
+
+/* Where-to-source links */
+.src-wrap { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 18px; width: 100%; }
+.src-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 650; margin-bottom: 10px; }
+.src-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.src-chip { font-size: 12.5px; font-weight: 550; padding: 7px 12px; border-radius: var(--r-pill); border: 1px solid var(--border); color: var(--text); background: var(--surface); text-decoration: none; }
+.src-chip:hover { border-color: var(--brand); color: var(--brand); text-decoration: none; }
