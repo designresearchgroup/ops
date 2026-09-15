@@ -1,0 +1,13 @@
+# Secrets — never commit
+ops/api/config.php
+.dev.vars
+.env
+*.local
+
+# Tooling
+node_modules/
+.wrangler/
+.DS_Store
+
+# The source SKILL spec lives elsewhere; keep it out of the deployed repo if desired.
+# job_application_agent_SKILL.md

@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giggy — your cash partner</title>
+  <meta name="description" content="Giggy — your cash partner. Validate job opportunities, screen yourself in a qualifying interview, and generate interview-defensible, ATS-safe resumes.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><path d='M9 21V15M16 21V11M23 21V17' stroke='white' stroke-width='2.4' stroke-linecap='round'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+  <div class="shell">
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">
+        <div class="logo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M6 18V12M12 18V6M18 18V14" stroke="white" stroke-width="2.4" stroke-linecap="round"/></svg>
+        </div>
+        <div>
+          <div class="brand-name">Giggy</div>
+          <div class="brand-tag">your cash partner</div>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <button class="nav-item active" data-tab="dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Dashboard
+        </button>
+        <button class="nav-item" data-tab="validate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Validate
+        </button>
+        <button class="nav-item" data-tab="tracker">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.4"/><circle cx="3.5" cy="12" r="1.4"/><circle cx="3.5" cy="18" r="1.4"/></svg>
+          Pipeline
+          <span class="badge-count" id="nav-count">0</span>
+        </button>
+        <button class="nav-item" data-tab="trends">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg>
+          Skill trends
+        </button>
+
+        <div class="nav-sec">Configuration</div>
+        <button class="nav-item" data-tab="profile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile &amp; guardrails
+        </button>
+        <button class="nav-item" data-tab="settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Settings
+        </button>
+      </nav>
+
+      <div class="side-foot">
+        <div class="side-status"><span class="dot" id="side-dot"></span><span id="side-status-txt">Not connected</span></div>
+        <button class="theme-btn" id="theme-btn"><span id="theme-ic"></span> <span id="theme-lbl">Theme</span></button>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+
+    <!-- ==================== MAIN ==================== -->
+    <main class="main">
+      <div class="topbar">
+        <button class="btn ghost menu-btn" id="menu-btn" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div>
+          <h1 id="page-title">Dashboard</h1>
+          <div class="sub" id="page-sub">Your job search, end to end</div>
+        </div>
+        <div class="grow"></div>
+        <div class="topbar-actions" id="topbar-actions"></div>
+      </div>
+
+      <!-- ---------- DASHBOARD ---------- -->
+      <section id="view-dashboard" class="view active">
+        <div class="content">
+          <div id="dash-banner"></div>
+          <div id="dash-stats" class="stat-grid"></div>
+          <div class="grid dash">
+            <!-- featured: conversation with the agent -->
+            <div class="card pad">
+              <div class="chat-head">
+                <span class="live"></span>
+                <div style="flex:1">
+                  <p class="section-label" style="margin:0">Qualifying interview</p>
+                  <div class="small muted">The agent screens you for a role the way a recruiter would — one question at a time, ending in a readiness verdict.</div>
+                </div>
+                <button class="btn sm ghost" id="chat-clear" title="Start over">Clear</button>
+              </div>
+              <div class="iv-setup">
+                <button class="iv-btn" id="iv-jd-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg> <span id="iv-jd-label">Job description</span></button>
+                <label class="iv-btn" for="iv-resume"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> <span id="iv-resume-label">Resume PDF</span></label>
+                <input type="file" id="iv-resume" accept="application/pdf" hidden>
+                <button class="btn sm primary" id="iv-begin" hidden>Begin interview</button>
+              </div>
+              <div class="iv-jd-wrap" id="iv-jd-wrap" hidden>
+                <textarea id="iv-jd" class="jd" style="min-height:140px" placeholder="Paste the job description you're interviewing for…"></textarea>
+                <div class="btnrow" style="margin-top:8px">
+                  <button class="btn sm primary" id="iv-jd-save">Set JD</button>
+                  <button class="btn sm ghost" id="iv-jd-cancel">Cancel</button>
+                </div>
+              </div>
+              <div class="chat" style="margin-top:12px">
+                <div class="chips-row" id="chat-chips"></div>
+                <div class="chat-scroll" id="chat-scroll"></div>
+                <div class="chat-input">
+                  <textarea id="chat-text" placeholder="Answer the interviewer, or name the role to screen for… (Enter to send, Shift+Enter for newline)"></textarea>
+                  <button class="btn primary" id="chat-send">Send</button>
+                </div>
+              </div>
+            </div>
+            <!-- right rail: pipeline snapshot -->
+            <div>
+              <div class="card">
+                <div class="card-head"><h3>Pipeline by status</h3><div class="grow"></div><span class="small muted" id="dash-total-lbl"></span></div>
+                <div class="card-body"><div id="dash-funnel" class="funnel"></div></div>
+              </div>
+              <div class="card" style="margin-top:18px">
+                <div class="card-head"><h3>Verdict mix</h3></div>
+                <div class="card-body"><div id="dash-verdict" class="funnel"></div></div>
+              </div>
+              <div class="card" style="margin-top:18px">
+                <div class="card-head"><h3>Recent</h3><div class="grow"></div><button class="btn sm ghost" data-goto="tracker">All</button></div>
+                <div class="card-body"><div id="dash-recent" class="rlist"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- VALIDATE ---------- -->
+      <section id="view-validate" class="view">
+        <div class="content">
+          <div class="grid split">
+            <div class="card pad">
+              <p class="section-label">Job description</p>
+              <label class="field" for="jd">Paste the full JD. The parser pulls title, company, location, comp, must-haves and red flags.</label>
+              <textarea id="jd" class="jd" placeholder="Paste a job description here…&#10;&#10;The fit analysis runs first: strong fits → gaps → verdict (clean fit / legitimate reach / skip) → flags → true keywords to mirror. Generation is disabled on a 'skip'."></textarea>
+              <div class="btnrow" style="margin-top:14px">
+                <button id="btn-validate" class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Validate opportunity</button>
+                <button id="btn-clear-jd" class="btn ghost">Clear</button>
+                <span class="hint" style="margin:0">⌘/Ctrl + Enter</span>
+              </div>
+              <div id="validate-error" class="err-box" hidden style="margin-top:14px"></div>
+            </div>
+
+            <div>
+              <div id="validate-empty" class="card pad empty-hero">
+                <div class="eh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                <h3 style="margin:0 0 4px;font-size:16px">Honest fit read, first</h3>
+                <p class="muted small" style="margin:0 0 6px">The verdict comes before anything is written. You'll get:</p>
+                <ul class="checklist">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><b>Verdict</b> — clean fit · legitimate reach · skip, with reasoning</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><b>Strong fits</b> — each requirement tied to verifiable evidence</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><b>Gaps</b> — stated plainly, never papered over</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><b>Flags</b> — hard gates, #LI-DNI, evergreen, on-site, comp, sponsorship</span></li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><b>Keywords</b> to mirror — the true ones only</span></li>
+                </ul>
+                <p class="muted small" style="margin:14px 0 0">On a non-skip verdict, generate an ATS-safe CV + cover letter — each validated against the HAVE/DON'T lists — then log it to your pipeline.</p>
+              </div>
+              <div id="result"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- TRACKER / PIPELINE ---------- -->
+      <section id="view-tracker" class="view">
+        <div class="content">
+          <div class="card">
+            <div class="card-body" style="padding-bottom:6px">
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+                <div id="tracker-stats" class="filter-chips" style="flex:1"></div>
+                <div class="input-icon" style="max-width:230px">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input id="tracker-search" type="text" placeholder="Search…">
+                </div>
+              </div>
+              <div id="tracker-body"></div>
+            </div>
+          </div>
+          <p class="hint">Status is editable inline; keep it honest for benefits/aid reporting. Export produces the standard sheet columns (Date · Employer · Position · Location · How applied · Pay · Status · Notes). Data is stored only in this browser.</p>
+        </div>
+      </section>
+
+      <!-- ---------- TRENDS ---------- -->
+      <section id="view-trends" class="view">
+        <div class="content">
+          <div class="card pad" style="margin-bottom:18px">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <div style="flex:1;min-width:220px">
+                <p class="section-label" style="margin:0">Align proven skills to where the market is going</p>
+                <div class="small muted">The agent reads your profile + pipeline and maps your real, older skills onto current in-demand language — bridges, honest gaps, and positioning moves. Grounded in your facts; never invents.</div>
+              </div>
+              <button id="btn-trends" class="btn primary">Analyze trends</button>
+            </div>
+            <div id="trends-meta" class="hint" style="margin-top:10px"></div>
+            <div id="trends-error" class="err-box" hidden style="margin-top:12px"></div>
+          </div>
+          <div id="trends-out"></div>
+        </div>
+      </section>
+
+      <!-- ---------- PROFILE ---------- -->
+      <section id="view-profile" class="view">
+        <div class="content">
+          <div class="grid cols-2">
+            <div class="card pad">
+              <p class="section-label">Guardrails — the honesty engine</p>
+              <p class="muted small" style="margin:0 0 12px">Every validation and generation is bound by these facts. Edit the JSON to change them.</p>
+              <label class="field">The moat (positioning through-line)</label>
+              <div id="moat-text" class="moat-box"></div>
+              <label class="field">HAVE — safe to claim when true for the role</label>
+              <div id="have-pills" class="pill-list"></div>
+              <label class="field">DON'T HAVE — never claim; surface as gaps</label>
+              <div id="donthave-pills" class="pill-list"></div>
+              <p class="hint" style="margin-top:14px">Employment history: <span id="emp-count"></span> verified roles drive keyword mirroring &amp; evidence.</p>
+            </div>
+            <div class="card pad">
+              <p class="section-label">Canonical profile (JSON)</p>
+              <p class="muted small" style="margin:0 0 12px">Source of truth. Swap this block to reuse OPS for another job seeker.</p>
+              <textarea id="profile-json" class="mono" spellcheck="false"></textarea>
+              <div class="btnrow" style="margin-top:14px">
+                <button id="btn-save-profile" class="btn primary">Save profile</button>
+                <button id="btn-reset-profile" class="btn ghost">Reset to defaults</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- SETTINGS ---------- -->
+      <section id="view-settings" class="view">
+        <div class="content">
+          <div class="grid cols-2">
+            <div class="card pad">
+              <p class="section-label">Claude connection</p>
+              <div class="side-status" style="color:var(--muted);margin:2px 0 14px"><span class="dot" id="key-dot"></span><span id="key-status"></span></div>
+
+              <label class="radio-row"><input type="radio" name="mode" value="proxy"> <span><b>Server proxy</b> — the key lives in a server secret (<kbd>ANTHROPIC_API_KEY</kbd>). Routes through the Supabase Edge Function when connected below, else the GoDaddy PHP proxy. Recommended for the deployed site.</span></label>
+              <label class="radio-row"><input type="radio" name="mode" value="direct"> <span><b>Direct from browser</b> — paste your own key below; it stays in this browser only. Best for local use.</span></label>
+
+              <div id="direct-key-wrap">
+                <label class="field" for="api-key">API key</label>
+                <input id="api-key" type="password" placeholder="sk-ant-…" autocomplete="off">
+                <p class="hint">Stored only in this browser's localStorage — sent directly to Anthropic. Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+              </div>
+
+              <p class="hint" id="proxy-endpoint" style="margin-top:12px"></p>
+
+              <label class="field" for="model-select">Model</label>
+              <select id="model-select"></select>
+              <div class="btnrow" style="margin-top:14px">
+                <button id="btn-save-settings" class="btn primary">Save</button>
+                <button id="btn-test" class="btn">Test connection</button>
+              </div>
+            </div>
+            <div class="card pad">
+              <p class="section-label">Supabase — database &amp; edge functions</p>
+              <div class="side-status" style="color:var(--muted);margin:2px 0 12px"><span class="dot" id="sb-dot"></span><span id="sb-status">Local only — pipeline stored in this browser</span></div>
+              <p class="small muted" style="margin-top:0">Connect a Supabase project to store the pipeline in Postgres (synced across devices) and route Claude through the <kbd>claude</kbd> Edge Function. Run <kbd>supabase/schema.sql</kbd> and deploy the function first (see <kbd>README.md</kbd>).</p>
+              <label class="field" for="sb-url">Project URL</label>
+              <input id="sb-url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false">
+              <label class="field" for="sb-key">Anon public key</label>
+              <input id="sb-key" type="password" placeholder="eyJhbGci…" autocomplete="off">
+              <p class="hint">The anon key is safe in the frontend — access is governed by row-level security. Never paste the <b>service_role</b> key here.</p>
+              <div class="btnrow" style="margin-top:14px">
+                <button id="btn-sb-save" class="btn primary">Connect</button>
+                <button id="btn-sb-clear" class="btn ghost">Disconnect</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card pad" style="margin-top:18px">
+            <p class="section-label">About Giggy</p>
+            <p class="small muted" style="margin-top:0">Giggy is <b>your cash partner</b> — a CV creation &amp; delegation tool that validates opportunities, screens you in a qualifying interview, writes interview-defensible resumes and cover letters (exported as real, ATS-parseable PDFs), and manages a pipeline that aligns proven skills to current job-market trends. It enforces the operating rules: fit analysis before generation, moat-led framing, true-keyword mirroring, ATS-safe output, and a post-generation guardrail check against the HAVE/DON'T lists.</p>
+            <p class="small muted">Static frontend served at <b>jamesecoleman.com/ops/</b> and shipped to GoDaddy over FTPS on every push to <kbd>main</kbd>. Data lives in <b>Supabase Postgres</b> when connected (localStorage otherwise); the Claude key stays server-side in a <b>Supabase Edge Function</b> (or the GoDaddy PHP proxy). See <kbd>README.md</kbd>.</p>
+            <div class="btnrow" style="margin-top:12px">
+              <button id="btn-reset-tracker-2" class="btn sm ghost">Reset pipeline to seed</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="profile.js"></script>
+  <script src="seed.js"></script>
+  <script src="supabase.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+name: Deploy to GoDaddy
+
+# CI/CD: every push to main syncs the app to GoDaddy over FTPS.
+# Only the ops/ folder is deployed, into public_html/ops/ (URL: /ops/).
+on:
+  push:
+    branches: [main]
+    paths: ['ops/**', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ftp-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync ops/ to GoDaddy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:   ${{ secrets.FTP_SERVER }}     # e.g. ftp.jamesecoleman.com
+          username: ${{ secrets.FTP_USERNAME }}    # full cPanel/FTP user
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./ops/
+          server-dir: /public_html/ops/            # adjust if your web root differs
+          # Never touch the server-side secret, and don't upload samples/vcs noise.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/config.php
+            **/*.sample.php
+            **/.DS_Store
