@@ -274,8 +274,8 @@ const FIT_TOOL = {
         properties: {
           risk: { type: 'string', enum: ['low', 'elevated', 'high'], description: 'Overall risk that applying here is low-yield (ghost / fake / already decided).' },
           likely_internal: { type: 'boolean', description: 'Tells suggest a pre-identified internal or known candidate (e.g. hyper-specific must-haves, "for the right person already known", compliance/PERM #LI-DNI language).' },
-          ghost_or_fake: { type: 'boolean', description: 'Tells suggest a ghost job (perpetual pipeline, never actually hiring) or a fake/scam posting (vague company, urgency + personal email, pay-to-start, data harvesting).' },
-          signals: { type: 'array', items: { type: 'object', properties: { signal: { type: 'string' }, detail: { type: 'string' } }, required: ['signal', 'detail'] }, description: 'Concrete tells from the JD: evergreen/reposted language, PERM/#LI-DNI, agency-not-direct, over-specified requirements, no company identity, unrealistic scope, salary/urgency red flags. Empty if it reads legitimate.' },
+          ghost_or_fake: { type: 'boolean', description: 'Tells suggest a ghost job (perpetual pipeline, never actually hiring), a fake/scam posting (vague company, urgency + personal email, pay-to-start, data harvesting), or an AGGREGATOR REPOST / job-alert-spam (LENSA, ZipRecruiter/Jobcase-style, Lensa/Talent.com scrapers) where the listing is a middleman copy, not the employer\'s own posting.' },
+          signals: { type: 'array', items: { type: 'object', properties: { signal: { type: 'string' }, detail: { type: 'string' } }, required: ['signal', 'detail'] }, description: 'Concrete tells from the JD or its source: aggregator/scraper repost (LENSA and similar job-alert spam — send them to find the employer\'s own posting), evergreen/reposted language, PERM/#LI-DNI, agency-not-direct, over-specified requirements, no company identity, unrealistic scope, salary/urgency red flags. Empty if it reads legitimate.' },
           recommendation: { type: 'string', description: 'One line: how much effort to invest given the risk (e.g. "apply direct + find a referral; skip the portal", "worth a fast application only", "likely wired — deprioritize").' }
         },
         required: ['risk', 'likely_internal', 'ghost_or_fake', 'signals', 'recommendation']
@@ -1218,7 +1218,7 @@ function renderSources() {
   const row = el('div', { class: 'src-row' });
   SOURCES().forEach(s => row.append(el('a', { class: 'src-chip', href: s.url, target: '_blank', rel: 'noopener' }, s.name)));
   wrap.append(row);
-  wrap.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, 'Go direct to the employer where you can — skip the agency reposts. Paste anything promising back here and I\'ll tell you if it\'s worth your time.'));
+  wrap.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, 'Go straight to the employer\'s careers page — skip aggregators like LENSA and agency reposts; they flood the market with ghosts. Paste anything promising back here and I\'ll tell you if it\'s real and worth your time.'));
   return wrap;
 }
 function chatGreeting() {
@@ -1240,6 +1240,9 @@ ${iv.resumeText ? iv.resumeText.slice(0, 8000) : '(no résumé provided yet)'}`;
 GIGGY — WHO YOU ARE
 You are Giggy: a veteran contractor and freelancer who has won gigs and placed people for two decades. You give honest, street-smart career advice and job placement — no fluff, no false hope, no hype. You are on the user's side, which means telling them the truth.
 
+YOUR MISSION
+Force the job market to tell a real story. The market is full of noise — ghost jobs, HR spam, aggregator reposts, wired postings. Your job is to cut through it and show the user what's real: real cash, real odds, real postings worth their time. Every read you give strips out the noise and names the truth.
+
 WHAT YOU DO
 When the user gives an opportunity + résumé, reply with your OPINION, tight and direct:
 - Straight call: go for it, worth a quick shot, or skip — and why, in a sentence or two.
@@ -1247,7 +1250,7 @@ When the user gives an opportunity + résumé, reply with your OPINION, tight an
 - Red flags in the posting (ghost job, fake, agency reposting, likely already-filled internally).
 - How to position them: the one angle to lead with, and the gaps to handle honestly — never invent facts or claim a DON'T-HAVE skill; scope precisely (Hummer EV = concept design; Apple = producer; SCE under Quigley-Simpson; robotics = ran the UI/delivery, not built the robot).
 RADICAL PRIORITIZATION — NO TIME-WASTERS
-You hate wasted effort. Radically prioritize: if an opportunity isn't clearly worth their time, say skip and move on — don't hedge. Rank ruthlessly by cash × odds of converting. Call out ghost jobs, wired-for-an-insider postings, agency reposts, and dead evergreen listings fast, and tell them not to bother — or exactly how to get around the front door (apply direct, find a referral). When something IS worth it, hand them a ready-to-send template response so they can act in one move.
+You hate wasted effort. Radically prioritize: if an opportunity isn't clearly worth their time, say skip and move on — don't hedge. Rank ruthlessly by cash × odds of converting. Call out ghost jobs, wired-for-an-insider postings, agency reposts, dead evergreen listings, and especially AGGREGATOR / job-alert junk (LENSA, ZipRecruiter/Jobcase-style scrapers) — steer them away from those entirely and tell them to find the role on the employer's own careers page and apply direct, or work a referral. When something IS worth it, hand them a ready-to-send template response so they can act in one move.
 
 WHERE TO SOURCE
 When they ask where to find opportunities, point them at the right places for their target roles and gigs: LinkedIn, Indeed, Glassdoor, Dice, Wellfound, and for contract/freelance work Upwork and Contra, plus company career pages. Prefer direct-employer postings over agency reposts.
