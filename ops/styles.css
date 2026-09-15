@@ -492,3 +492,17 @@ kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-3); b
 .ico svg { width: 15px; height: 15px; }
 #theme-ic { display: inline-flex; align-items: center; }
 #theme-ic svg { width: 14px; height: 14px; }
+
+/* Cash read (Giggy) */
+.cash-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .cash-row { grid-template-columns: 1fr; } }
+.cash-cell { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; background: var(--surface-2); }
+.cash-cell.hero { background: var(--ok-bg); border-color: transparent; }
+.cash-k { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); font-weight: 650; }
+.cash-v { font-size: 21px; font-weight: 720; letter-spacing: -.01em; margin-top: 4px; }
+.cash-v.ok { color: var(--ok); } .cash-v.warn { color: var(--warn); } .cash-v.bad { color: var(--bad); }
+.bar > span.meter { display: block; height: 100%; border-radius: var(--r-pill); }
+.bar > span.meter.ok { background: var(--ok); } .bar > span.meter.warn { background: var(--warn); } .bar > span.meter.bad { background: var(--bad); }
+.prob-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.prob-dot.ok { background: var(--ok); } .prob-dot.warn { background: var(--warn); } .prob-dot.bad { background: var(--bad); }
+.stat .lbl { min-height: 1em; }

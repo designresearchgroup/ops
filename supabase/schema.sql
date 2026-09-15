@@ -18,6 +18,9 @@ create table if not exists public.opportunities (
   flags        jsonb       not null default '[]',
   fit          text        not null default '',
   date_applied text        not null default '',
+  potential_amount   text,
+  potential_midpoint bigint,
+  probability        int,
   created_at   bigint      not null default (extract(epoch from now()) * 1000)::bigint,
   updated_at   timestamptz not null default now()
 );

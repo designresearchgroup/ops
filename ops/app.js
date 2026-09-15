@@ -69,13 +69,47 @@ if (!state.tracker) { state.tracker = seedTracker(); save(LS.tracker, state.trac
 
 function structuredCloneSafe(o) { return JSON.parse(JSON.stringify(o)); }
 function seedTracker() {
-  return (window.SEED_PIPELINE || []).map(r => ({
-    id: uid(), dateApplied: '', createdAt: Date.now(),
-    employer: r.employer, title: r.title, location: r.location || '',
-    howApplied: r.howApplied || '', pay: r.pay || '', status: r.status,
-    notes: r.notes || '', tier: r.tier || null, verdict: r.verdict || null,
-    flags: r.flags || [], fit: r.fit || ''
-  }));
+  return (window.SEED_PIPELINE || []).map(r => {
+    const est = estimateCash(r);
+    return {
+      id: uid(), dateApplied: '', createdAt: Date.now(),
+      employer: r.employer, title: r.title, location: r.location || '',
+      howApplied: r.howApplied || '', pay: r.pay || '', status: r.status,
+      notes: r.notes || '', tier: r.tier || null, verdict: r.verdict || null,
+      flags: r.flags || [], fit: r.fit || '',
+      potentialAmount: est.amount, potentialMidpoint: est.mid, probability: est.prob
+    };
+  });
+}
+// Starting estimate for seeded rows (transparent, code-derived; refine per role by validating).
+function parsePayMid(pay) {
+  if (!pay) return null;
+  const hr = /(\d+(?:\.\d+)?)\s*\/?\s*hr/i.exec(pay);
+  if (hr) return Math.round(parseFloat(hr[1]) * 2080);
+  const nums = (pay.match(/\$?\s*(\d{2,3})\s*[kK]/g) || []).map(s => parseInt(s.replace(/[^\d]/g, ''), 10) * 1000);
+  if (nums.length >= 2) return Math.round((nums[0] + nums[1]) / 2);
+  if (nums.length === 1) return nums[0];
+  return null;
+}
+function estMidFromTitle(t) {
+  t = (t || '').toLowerCase();
+  if (/director|principal|head|lead|staff/.test(t)) return 235000;
+  if (/tpm|technical program|product manager|product leader|ai|forward deployed|engineer/.test(t)) return 210000;
+  if (/manager|producer|consultant|transformation/.test(t)) return 165000;
+  if (/specialist|analyst|designer|cro|web/.test(t)) return 130000;
+  return 150000;
+}
+function estimateCash(r) {
+  const mid = parsePayMid(r.pay) || estMidFromTitle(r.title);
+  let prob = { clean_fit: 55, legitimate_reach: 32, skip: 5 }[r.verdict] ?? 38;
+  const s = r.status;
+  if (s === 'Submitted' || s === 'Applied') prob += 12;
+  else if (s === 'In progress') prob += 22;
+  else if (s === 'Not accepted') prob = 0;
+  if ((r.flags || []).some(f => /evergreen|LI-DNI|internal|wired|different profession|defense/i.test(f))) prob = Math.round(prob * 0.6);
+  prob = Math.max(0, Math.min(90, prob));
+  const amount = r.pay || (mid ? fmtUSD(mid) + '/yr (est.)' : '');
+  return { amount, mid, prob };
 }
 
 /* ============================================================================
@@ -223,6 +257,17 @@ const FIT_TOOL = {
       },
       keywords: { type: 'array', items: { type: 'string' }, description: 'JD keywords/phrases that are TRUE for the candidate and should be mirrored in the resume.' },
       donthave_required: { type: 'array', items: { type: 'string' }, description: 'Any DON\'T-HAVE skills the JD requires — must be surfaced, never claimed.' },
+      cash: {
+        type: 'object',
+        description: 'The cash read — Giggy is a cash partner, so quantify the money.',
+        properties: {
+          potential_amount: { type: 'string', description: 'Realistic cash value if landed, annualized, as a range or figure (e.g. "$180K–$220K/yr", or "~$74/hr ≈ $155K/yr"). Use the JD comp if stated; else infer from role, level and market, anchored to the candidate\'s ~$250K senior floor for senior PM/AI roles.' },
+          potential_midpoint_usd: { type: 'integer', description: 'Single annualized USD midpoint of potential_amount, as an integer (e.g. 200000).' },
+          conversion_probability: { type: 'integer', description: 'HONEST percent (0–100) that this converts to cash — i.e. the candidate lands it AND gets paid. Weigh the verdict, the gaps, competition, and the posting authenticity: cut it hard for ghost/fake/evergreen/likely-internal postings and for unclearable hard gates.' },
+          basis: { type: 'string', description: 'One line on what drives both numbers.' }
+        },
+        required: ['potential_amount', 'potential_midpoint_usd', 'conversion_probability', 'basis']
+      },
       authenticity: {
         type: 'object',
         description: 'Threat/legitimacy assessment of the posting itself — how likely it is a low-yield posting. Judge ONLY from tells in the JD text; do not speculate beyond evidence.',
@@ -237,7 +282,7 @@ const FIT_TOOL = {
       },
       clarifiers: { type: 'array', items: { type: 'string' }, description: 'Questions to ask the candidate before generating, when a requirement needs a fact not in the profile. Empty if none.' }
     },
-    required: ['parsed', 'primary_frame', 'verdict', 'verdict_reason', 'strong_fits', 'gaps', 'flags', 'keywords', 'donthave_required', 'authenticity', 'clarifiers']
+    required: ['parsed', 'primary_frame', 'verdict', 'verdict_reason', 'strong_fits', 'gaps', 'flags', 'keywords', 'donthave_required', 'cash', 'authenticity', 'clarifiers']
   }
 };
 
@@ -260,7 +305,7 @@ async function runValidate() {
       max_tokens: 3000,
       tools: [FIT_TOOL],
       tool_choice: { type: 'tool', name: 'submit_fit_analysis' },
-      messages: [{ role: 'user', content: `Parse this job description and run the fit analysis. Be honest — recommend "skip" if it's a different profession or the hard gates are disqualifying.\n\nAlso run the posting threat assessment: from tells in the JD text alone, judge whether this is likely a ghost job, a fake/scam, an evergreen pipeline post, a compliance/PERM posting (#LI-DNI), agency-not-direct, or a role likely already earmarked for an internal/known candidate — and how much effort it's worth. Don't speculate beyond what the text supports.\n\nJOB DESCRIPTION:\n${jd}` }]
+      messages: [{ role: 'user', content: `Parse this job description and run the fit analysis. Be honest — recommend "skip" if it's a different profession or the hard gates are disqualifying.\n\nAlso run the posting threat assessment: from tells in the JD text alone, judge whether this is likely a ghost job, a fake/scam, an evergreen pipeline post, a compliance/PERM posting (#LI-DNI), agency-not-direct, or a role likely already earmarked for an internal/known candidate — and how much effort it's worth. Don't speculate beyond what the text supports.\n\nAnd give the cash read — Giggy is a cash partner: the realistic annualized cash value if landed, and an HONEST probability it converts to cash. Cut the probability hard for ghost/fake/evergreen/likely-internal postings and unclearable hard gates; a great-fit clean role converts far better than a legitimate reach behind a wired posting.\n\nJOB DESCRIPTION:\n${jd}` }]
     });
     const analysis = toolResult(resp, 'submit_fit_analysis');
     state.lastAnalysis = analysis;
@@ -296,6 +341,9 @@ function renderAnalysis(a) {
     head.append(g);
   }
   root.append(head);
+
+  // Cash read (Giggy's headline)
+  if (a.cash) renderCash(root, a.cash);
 
   // Posting threat assessment
   if (a.authenticity) renderAuthenticity(root, a.authenticity);
@@ -365,6 +413,30 @@ function section(title) {
   const s = el('div', { class: 'card pad', style: 'margin-top:16px' });
   s.append(el('p', { class: 'section-label' }, title));
   return s;
+}
+function fmtUSD(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(n % 1000000 ? 1 : 0).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+  return '$' + Math.round(n);
+}
+function probClass(p) { return p >= 55 ? 'ok' : p >= 30 ? 'warn' : 'bad'; }
+function renderCash(root, cash) {
+  const mid = Number(cash.potential_midpoint_usd) || 0;
+  const prob = Math.max(0, Math.min(100, Number(cash.conversion_probability) || 0));
+  const expected = Math.round(mid * prob / 100);
+  const sec = section('Cash read');
+  const row = el('div', { class: 'cash-row' });
+  row.append(
+    el('div', { class: 'cash-cell' }, el('div', { class: 'cash-k' }, 'Potential'), el('div', { class: 'cash-v' }, cash.potential_amount || fmtUSD(mid))),
+    el('div', { class: 'cash-cell' }, el('div', { class: 'cash-k' }, 'Convert to cash'), el('div', { class: 'cash-v ' + probClass(prob) }, prob + '%')),
+    el('div', { class: 'cash-cell hero' }, el('div', { class: 'cash-k' }, 'Expected value'), el('div', { class: 'cash-v' }, fmtUSD(expected)))
+  );
+  sec.append(row);
+  // probability meter
+  sec.append(el('div', { class: 'bar', style: 'margin-top:12px' }, el('span', { class: 'meter ' + probClass(prob), style: 'width:' + prob + '%' })));
+  if (cash.basis) sec.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, cash.basis));
+  root.append(sec);
 }
 function renderAuthenticity(root, au) {
   const sec = section('Posting check — is it real?');
@@ -589,7 +661,8 @@ function logCurrent() {
     employer: p.company || '', title: p.title || '', location: p.location || '',
     howApplied: '', pay: p.comp || '', status: 'Prepared-not-sent',
     notes: a.verdict_reason || '', tier: null, verdict: a.verdict,
-    flags: (a.flags || []).map(f => prettyFlag(f.type) + ': ' + f.detail), fit: a.primary_frame || ''
+    flags: (a.flags || []).map(f => prettyFlag(f.type) + ': ' + f.detail), fit: a.primary_frame || '',
+    potentialAmount: a.cash?.potential_amount || '', potentialMidpoint: a.cash?.potential_midpoint_usd || null, probability: a.cash?.conversion_probability ?? null
   };
   state.tracker.unshift(rec); save(LS.tracker, state.tracker); dbUpsert(rec);
   updateNavCount();
@@ -611,7 +684,7 @@ function renderTracker() {
   const table = el('table', { class: 'tracker' });
   table.append(el('thead', {}, el('tr', {},
     el('th', {}, 'Employer'), el('th', {}, 'Position'), el('th', {}, 'Location'),
-    el('th', {}, 'How applied'), el('th', {}, 'Pay/Range'), el('th', {}, 'Date'),
+    el('th', {}, 'How applied'), el('th', {}, 'Cash outlook'), el('th', {}, 'Date'),
     el('th', {}, 'Status'), el('th', {}, 'Notes / flags'), el('th', {}, ''))));
 
   const tb = el('tbody');
@@ -634,7 +707,7 @@ function renderTracker() {
       el('td', {}, r.title),
       el('td', { class: 'small muted' }, r.location || '—'),
       el('td', { class: 'small muted' }, r.howApplied || '—'),
-      el('td', { class: 'small muted' }, r.pay || '—'),
+      cashCell(r),
       el('td', {}, dateInp),
       el('td', {}, statusPill(r.status), el('div', { style: 'margin-top:5px' }, statusSel)),
       notesCell,
@@ -646,6 +719,20 @@ function renderTracker() {
   updateNavCount();
 }
 function prettyVerdict(v) { return { clean_fit: 'Clean fit', legitimate_reach: 'Reach', skip: 'Skip' }[v] || v; }
+function cashCell(r) {
+  const mid = Number(r.potentialMidpoint) || 0;
+  const p = (r.probability == null || isNaN(Number(r.probability))) ? null : Number(r.probability);
+  const td = el('td');
+  td.append(el('div', { style: 'font-weight:600' }, r.potentialAmount || (mid ? fmtUSD(mid) : '—')));
+  if (p != null && mid) {
+    const exp = Math.round(mid * p / 100);
+    td.append(el('div', { class: 'small', style: 'margin-top:2px;display:flex;align-items:center;gap:6px' },
+      el('span', { class: 'prob-dot ' + probClass(p) }), el('span', { class: 'muted' }, p + '% → '), el('span', { style: 'font-weight:600' }, fmtUSD(exp))));
+  } else if (p != null) {
+    td.append(el('div', { class: 'small muted', style: 'margin-top:2px' }, p + '% convert'));
+  }
+  return td;
+}
 
 function renderTrackerStats() {
   const counts = {}; STATUSES.forEach(s => counts[s] = 0);
@@ -987,28 +1074,37 @@ const ICONS = {
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
   send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>',
-  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
 };
+function expectedPipelineCash() {
+  return Math.round((state.tracker || []).reduce((sum, r) => {
+    const mid = Number(r.potentialMidpoint) || 0, p = Number(r.probability);
+    return sum + (mid && p != null && !isNaN(p) ? mid * p / 100 : 0);
+  }, 0));
+}
 
 function renderDashboard() {
   const t = state.tracker;
   const by = s => t.filter(r => r.status === s).length;
   const active = by('In progress');
   const out = by('Submitted') + by('Applied');
-  const prepared = by('Prepared-not-sent');
+  const expected = expectedPipelineCash();
+  const potential = t.reduce((s, r) => s + (Number(r.potentialMidpoint) || 0), 0);
 
-  // stat cards
+  // stat cards — cash first (Giggy is a cash partner)
   const stats = $('#dash-stats'); stats.innerHTML = '';
   const cards = [
-    { ic: 'layers', cls: 'i-brand', num: t.length, lbl: 'Opportunities in pipeline' },
-    { ic: 'send', cls: 'i-ok', num: out, lbl: 'Submitted / applied' },
-    { ic: 'clock', cls: 'i-warn', num: active, lbl: 'In progress' },
-    { ic: 'edit', cls: 'i-info', num: prepared, lbl: 'Prepared, not sent' }
+    { ic: 'cash', cls: 'i-ok', num: fmtUSD(expected), lbl: 'Expected pipeline cash', sub: 'probability-weighted' },
+    { ic: 'target', cls: 'i-brand', num: fmtUSD(potential), lbl: 'Potential if all landed' },
+    { ic: 'layers', cls: 'i-info', num: String(t.length), lbl: 'Opportunities in pipeline' },
+    { ic: 'send', cls: 'i-warn', num: String(out + active), lbl: 'Active (submitted / in progress)' }
   ];
   cards.forEach(c => stats.append(el('div', { class: 'stat' },
     el('div', { class: 'ic ' + c.cls, html: ICONS[c.ic] }),
     el('div', { class: 'num' }, String(c.num)),
-    el('div', { class: 'lbl' }, c.lbl))));
+    el('div', { class: 'lbl' }, c.lbl + (c.sub ? '' : '')))));
 
   // funnel by status
   const fun = $('#dash-funnel'); fun.innerHTML = '';

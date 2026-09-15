@@ -18,6 +18,7 @@
     how_applied: r.howApplied || '', pay: r.pay || '', status: r.status || 'Prepared-not-sent',
     notes: r.notes || '', tier: r.tier ?? null, verdict: r.verdict ?? null,
     flags: r.flags || [], fit: r.fit || '', date_applied: r.dateApplied || '',
+    potential_amount: r.potentialAmount || '', potential_midpoint: r.potentialMidpoint ?? null, probability: r.probability ?? null,
     created_at: r.createdAt || Date.now()
   });
   const fromRow = r => ({
@@ -25,6 +26,7 @@
     howApplied: r.how_applied || '', pay: r.pay || '', status: r.status || 'Prepared-not-sent',
     notes: r.notes || '', tier: r.tier ?? null, verdict: r.verdict ?? null,
     flags: Array.isArray(r.flags) ? r.flags : [], fit: r.fit || '', dateApplied: r.date_applied || '',
+    potentialAmount: r.potential_amount || '', potentialMidpoint: r.potential_midpoint ?? null, probability: r.probability ?? null,
     createdAt: Number(r.created_at) || Date.now()
   });
 
