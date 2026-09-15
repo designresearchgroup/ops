@@ -40,11 +40,13 @@ A CV-creation & delegation tool ("Salesforce for jobseekers") that validates job
 
 1. Create a project at [supabase.com](https://supabase.com). Note the **Project URL** and the **anon public** key (Settings → API).
 2. Run `supabase/schema.sql` in the SQL editor (creates `opportunities` + row-level security). The default policy allows the anon key full access — fine for a single private operator; see the file's comments to switch to per-user auth when you commoditize.
-3. Deploy the Claude proxy and set its secret:
+3. Deploy the edge functions and set the Claude secret:
    ```bash
    supabase functions deploy claude
+   supabase functions deploy sourcer     # first-party ATS job sourcer (no secret needed)
    supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
    ```
+   The **sourcer** pulls jobs straight from employers' own ATS (Greenhouse/Lever/Ashby), dedups, and ranks by freshness — the anti-aggregator source. Set target companies in **Settings → Sourcing**.
 4. In the app → **Settings → Supabase**, paste the Project URL + anon key → **Connect**. The pipeline now syncs to Postgres and Claude routes through the edge function.
 
 ### 2. GoDaddy deploy (CI/CD + repo secrets)

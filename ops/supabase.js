@@ -83,7 +83,20 @@
       // delete every row (PostgREST needs a filter; created_at >= 0 matches all)
       await SB.rest('opportunities?created_at=gte.0', { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
     },
-    async test() { await SB.rest('opportunities?select=id&limit=1'); return true; }
+    async test() { await SB.rest('opportunities?select=id&limit=1'); return true; },
+
+    // ATS Sourcer edge function — first-party jobs, deduped + freshness-ranked
+    async source(payload) {
+      const c = SB.config(); if (!c) throw new Error('Supabase not configured.');
+      const res = await fetch(`${c.url}/functions/v1/sourcer`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', apikey: c.key, Authorization: 'Bearer ' + c.key },
+        body: JSON.stringify(payload)
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((j.error && j.error.message) || (res.status + ' ' + res.statusText));
+      return j;
+    }
   };
 
   window.SB = SB;

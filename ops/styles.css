@@ -549,3 +549,12 @@ kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-3); b
 .src-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .src-chip { font-size: 12.5px; font-weight: 550; padding: 7px 12px; border-radius: var(--r-pill); border: 1px solid var(--border); color: var(--text); background: var(--surface); text-decoration: none; }
 .src-chip:hover { border-color: var(--brand); color: var(--brand); text-decoration: none; }
+
+/* Sourced real-roles list */
+.role-list { display: flex; flex-direction: column; margin-top: 8px; }
+.role-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border-2); }
+.role-item:first-child { border-top: 0; }
+.role-main { flex: 1; min-width: 0; }
+.role-title { font-weight: 600; font-size: 13.5px; }
+.role-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.role-right { display: flex; align-items: center; gap: 8px; flex: none; }

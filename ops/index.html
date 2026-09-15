@@ -220,6 +220,16 @@
             </div>
           </div>
 
+          <div class="card pad" style="margin-top:18px">
+            <p class="section-label">Sourcing — target companies (first-party ATS)</p>
+            <p class="small muted" style="margin-top:0">The Sourcer edge function pulls fresh roles straight from these employers' own ATS — no aggregators, no reposts. One per line as <kbd>ats:slug</kbd> where ats is <kbd>greenhouse</kbd>, <kbd>lever</kbd>, or <kbd>ashby</kbd> and slug is the company's board name (e.g. <kbd>greenhouse:anthropic</kbd>, <kbd>ashby:openai</kbd>). Requires Supabase connected + the <kbd>sourcer</kbd> function deployed.</p>
+            <textarea id="sources-text" class="mono" style="min-height:150px" spellcheck="false"></textarea>
+            <div class="btnrow" style="margin-top:12px">
+              <button id="btn-sources-save" class="btn primary">Save companies</button>
+              <button id="btn-sources-reset" class="btn ghost">Reset to defaults</button>
+            </div>
+          </div>
+
           <div class="grid cols-2" style="margin-top:18px">
             <div class="card pad">
               <p class="section-label">Guardrails — the honesty engine</p>

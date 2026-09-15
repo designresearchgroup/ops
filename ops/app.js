@@ -16,8 +16,20 @@ const LS = {
   trends: 'ops.trends',
   interview: 'ops.interview',
   template: 'ops.template',
+  sources: 'ops.sources',
   theme: 'ops.theme'
 };
+// First-party ATS targets for the Sourcer (edit in Settings). ats:slug per line.
+const DEFAULT_SOURCES = [
+  { ats: 'greenhouse', slug: 'anthropic' },
+  { ats: 'ashby', slug: 'openai' },
+  { ats: 'ashby', slug: 'ramp' },
+  { ats: 'greenhouse', slug: 'figma' },
+  { ats: 'greenhouse', slug: 'notion' },
+  { ats: 'ashby', slug: 'linear' },
+  { ats: 'greenhouse', slug: 'vercel' },
+  { ats: 'greenhouse', slug: 'scaleai' }
+];
 const API_URL = 'https://api.anthropic.com/v1/messages';
 // Server proxy route (PHP at ops/api/claude.php on GoDaddy).
 // Resolved relative to this page so it works wherever /ops/ is mounted.
@@ -65,7 +77,9 @@ let state = {
   chat: load(LS.chat, []),
   trends: load(LS.trends, null),
   interview: load(LS.interview, { jd: '', resumeName: '', resumeText: '' }),
-  template: load(LS.template, { a: 0, f: 0, h: 0 })
+  template: load(LS.template, { a: 0, f: 0, h: 0 }),
+  sources: load(LS.sources, DEFAULT_SOURCES),
+  roles: null
 };
 if (!state.tracker) { state.tracker = seedTracker(); save(LS.tracker, state.tracker); }
 
@@ -814,7 +828,20 @@ function renderSettings() {
   updateProxyNote();
   updateKeyStatus();
   renderProfile();   // guardrails + canonical profile now live in Settings
+  const st = $('#sources-text'); if (st) st.value = (state.sources || []).map(s => s.ats + ':' + s.slug).join('\n');
 }
+function parseSources(text) {
+  return (text || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const [ats, slug] = l.split(':').map(x => (x || '').trim().toLowerCase());
+    return (['greenhouse', 'lever', 'ashby'].includes(ats) && slug) ? { ats, slug } : null;
+  }).filter(Boolean);
+}
+function saveSources() {
+  const list = parseSources($('#sources-text').value);
+  state.sources = list.length ? list : DEFAULT_SOURCES; save(LS.sources, state.sources);
+  renderSettings(); toast(state.sources.length + ' target companies saved.');
+}
+function resetSources() { state.sources = DEFAULT_SOURCES.slice(); save(LS.sources, state.sources); renderSettings(); toast('Sourcing reset to defaults.'); }
 function updateProxyNote() {
   const note = $('#proxy-endpoint'); if (!note) return;
   const c = window.SB && SB.config();
@@ -1279,7 +1306,58 @@ function renderSources() {
   SOURCES().forEach(s => row.append(el('a', { class: 'src-chip', href: s.url, target: '_blank', rel: 'noopener' }, s.name)));
   wrap.append(row);
   wrap.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, 'Go straight to the employer\'s careers page — skip aggregators like LENSA and agency reposts; they flood the market with ghosts. Paste anything promising back here and I\'ll tell you if it\'s real and worth your time.'));
+  // anti-bullshit: pull first-party ATS roles
+  const find = el('div', { class: 'btnrow', style: 'margin-top:14px' });
+  find.append(el('button', { class: 'btn primary', onclick: findRealRoles }, ico(IC.target || IC.doc), 'Find real roles'));
+  find.append(el('span', { class: 'hint', style: 'margin:0' }, 'Fresh, deduped, straight from employer ATS — no reposts.'));
+  wrap.append(find);
   return wrap;
+}
+
+/* ---- Sourcer: first-party ATS roles via the edge function ---- */
+async function findRealRoles() {
+  if (!(window.SB && SB.configured())) { toast('Connect Supabase in Settings — the Sourcer runs as an edge function.', true); switchTab('settings'); return; }
+  const p = $('#preview'); p.innerHTML = ''; p.append(loadingCard('Pulling fresh roles straight from employer ATS (Greenhouse · Lever · Ashby)…'));
+  try {
+    const q = (state.profile.targetRoles || [])[0] || '';
+    const res = await SB.source({ companies: state.sources, query: '', maxAgeDays: 21, limit: 40 });
+    state.roles = res;
+    renderRoles(res);
+  } catch (e) { p.innerHTML = ''; const b = el('div', { class: 'err-box' }); b.append(ico(IC.warn), document.createTextNode(' Sourcer failed: ' + friendlyErr(e) + ' (deploy the sourcer edge function?)')); p.append(b); p.append(el('div', { class: 'btnrow', style: 'margin-top:12px' }, el('button', { class: 'btn', onclick: renderPreview }, 'Back'))); }
+}
+function renderRoles(res) {
+  const p = $('#preview'); p.innerHTML = '';
+  p.append(el('div', { class: 'pv-head' },
+    el('span', { class: 'pv-t' }, 'Real roles · ' + (res.kept || 0)),
+    el('span', { class: 'grow' }),
+    el('span', { class: 'small muted' }, 'first-party · freshest first'),
+    el('button', { class: 'btn sm ghost', style: 'margin-left:8px', onclick: renderPreview }, 'Back')));
+  if (!res.roles || !res.roles.length) {
+    p.append(el('div', { class: 'small muted', style: 'margin-top:12px' }, 'Nothing fresh from your target companies right now. Add or fix company slugs in Settings → Sourcing.'));
+    return;
+  }
+  const list = el('div', { class: 'role-list' });
+  res.roles.forEach(r => {
+    const age = r.age_days == null ? '' : (r.age_days <= 3 ? 'new' : r.age_days + 'd');
+    const item = el('div', { class: 'role-item' });
+    item.append(el('div', { class: 'role-main' },
+      el('div', { class: 'role-title' }, r.title),
+      el('div', { class: 'role-sub' }, r.company + (r.location ? ' · ' + r.location : '') + ' · ' + r.source)));
+    const right = el('div', { class: 'role-right' });
+    if (age) right.append(el('span', { class: 'pill ' + (r.age_days <= 7 ? 'ok' : 'neutral') }, age));
+    right.append(el('a', { class: 'btn sm ghost', href: r.url, target: '_blank', rel: 'noopener' }, 'Open'));
+    right.append(el('button', { class: 'btn sm primary', onclick: () => rateSourced(r) }, 'Rate'));
+    item.append(right);
+    list.append(item);
+  });
+  p.append(list);
+  if (res.errors && res.errors.length) p.append(el('div', { class: 'hint', style: 'margin-top:10px' }, res.errors.length + ' source(s) unreachable — check slugs in Settings.'));
+}
+function rateSourced(r) {
+  state.interview = { ...(state.interview || {}), jd: `${r.title} — ${r.company}${r.location ? ' (' + r.location + ')' : ''}\nApply: ${r.url}\n\n${r.description || ''}` };
+  save(LS.interview, state.interview);
+  renderInterviewSetup();
+  rateOpportunity();
 }
 function chatGreeting() {
   return { role: 'assistant', content: "I'm Giggy — twenty years hustling contracts and freelance gigs, and I've placed a lot of people. Paste your résumé and the opportunity (a job post or a gig) and I'll give you my honest read: is it worth your time, what it's really worth in cash, and how to position you to win it. Then we sharpen the résumé together.\n\nDrop the opportunity and your résumé PDF above, or just paste them here." };
@@ -1655,6 +1733,8 @@ function init() {
   $('#btn-trends').addEventListener('click', runTrends);
   $('#btn-sb-save').addEventListener('click', saveSupabase);
   $('#btn-sb-clear').addEventListener('click', () => { SB.setConfig('', ''); renderSettings(); toast('Supabase disconnected.'); });
+  $('#btn-sources-save').addEventListener('click', saveSources);
+  $('#btn-sources-reset').addEventListener('click', resetSources);
   $('#tracker-search').addEventListener('input', renderTracker);
 
   updateNavCount();
