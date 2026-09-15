@@ -259,11 +259,11 @@ const FIT_TOOL = {
       donthave_required: { type: 'array', items: { type: 'string' }, description: 'Any DON\'T-HAVE skills the JD requires — must be surfaced, never claimed.' },
       cash: {
         type: 'object',
-        description: 'The cash read — Giggy is a cash partner, so quantify the money.',
+        description: 'Per-opportunity cash rating — the money THIS single opportunity is worth, not an annual salary or an aggregate.',
         properties: {
-          potential_amount: { type: 'string', description: 'Realistic cash value if landed, annualized, as a range or figure (e.g. "$180K–$220K/yr", or "~$74/hr ≈ $155K/yr"). Use the JD comp if stated; else infer from role, level and market, anchored to the candidate\'s ~$250K senior floor for senior PM/AI roles.' },
-          potential_midpoint_usd: { type: 'integer', description: 'Single annualized USD midpoint of potential_amount, as an integer (e.g. 200000).' },
-          conversion_probability: { type: 'integer', description: 'HONEST percent (0–100) that this converts to cash — i.e. the candidate lands it AND gets paid. Weigh the verdict, the gaps, competition, and the posting authenticity: cut it hard for ghost/fake/evergreen/likely-internal postings and for unclearable hard gates.' },
+          potential_amount: { type: 'string', description: 'Realistic cash THIS opportunity pays if landed, as a figure or range. A gig, task, or contract engagement is typically hundreds to a few thousand dollars — use the posted pay if there is one; do not annualize a salary into a large number.' },
+          potential_midpoint_usd: { type: 'integer', description: 'Single USD midpoint of potential_amount for this one opportunity, as an integer (e.g. 850 or 3200).' },
+          conversion_probability: { type: 'integer', description: 'HONEST percent (0–100) that this converts to cash — the user lands it AND gets paid. Weigh fit, gaps, competition and posting authenticity: cut it hard for ghost/fake/evergreen/likely-internal postings.' },
           basis: { type: 'string', description: 'One line on what drives both numbers.' }
         },
         required: ['potential_amount', 'potential_midpoint_usd', 'conversion_probability', 'basis']
@@ -467,6 +467,7 @@ const IC = {
   copy: S + '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
   print: S + '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
   x: S + '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  cash: S + '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
   warn: S.replace('1.9', '2') + '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
   help: S + '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
   flag: S + '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>',
@@ -572,9 +573,10 @@ ${state.lastJD}`;
   }
 }
 
-function renderDocs(d) {
-  const out = $('#docs-out'); out.innerHTML = '';
-  const panel = el('div', { class: 'card pad', style: 'margin-top:16px' });
+function renderDocs(d, container) {
+  const out = container || $('#docs-out');
+  if (!container) out.innerHTML = '';   // when targeting the Validate result slot, clear it; preview manages its own header
+  const panel = el('div', { class: container ? 'card pad' : 'card pad', style: 'margin-top:12px' });
 
   // guardrail: deterministic code gate (Node 6) + LLM self-check
   const sc = d.self_check || { claimed_donthave: [], invented_facts: [], notes: '' };
@@ -1085,112 +1087,132 @@ function expectedPipelineCash() {
   }, 0));
 }
 
-function renderDashboard() {
-  const t = state.tracker;
-  const by = s => t.filter(r => r.status === s).length;
-  const active = by('In progress');
-  const out = by('Submitted') + by('Applied');
-  const expected = expectedPipelineCash();
-  const potential = t.reduce((s, r) => s + (Number(r.potentialMidpoint) || 0), 0);
+// Home = conversation + preview (the whole product)
+function renderDashboard() { renderChat(); renderPreview(); }
 
-  // stat cards — cash first (Giggy is a cash partner)
-  const stats = $('#dash-stats'); stats.innerHTML = '';
-  const cards = [
-    { ic: 'cash', cls: 'i-ok', num: fmtUSD(expected), lbl: 'Expected pipeline cash', sub: 'probability-weighted' },
-    { ic: 'target', cls: 'i-brand', num: fmtUSD(potential), lbl: 'Potential if all landed' },
-    { ic: 'layers', cls: 'i-info', num: String(t.length), lbl: 'Opportunities in pipeline' },
-    { ic: 'send', cls: 'i-warn', num: String(out + active), lbl: 'Active (submitted / in progress)' }
-  ];
-  cards.forEach(c => stats.append(el('div', { class: 'stat' },
-    el('div', { class: 'ic ' + c.cls, html: ICONS[c.ic] }),
-    el('div', { class: 'num' }, String(c.num)),
-    el('div', { class: 'lbl' }, c.lbl + (c.sub ? '' : '')))));
+function onHome() { const v = $('#view-dashboard'); return v && v.classList.contains('active'); }
 
-  // funnel by status
-  const fun = $('#dash-funnel'); fun.innerHTML = '';
-  const max = Math.max(1, ...STATUSES.map(by));
-  const gclass = { 'Submitted': 'g-ok', 'Applied': 'g-ok', 'In progress': 'g-warn', 'Prepared-not-sent': 'g-neutral', 'Not accepted': 'g-bad' };
-  STATUSES.forEach(s => {
-    const n = by(s);
-    fun.append(el('div', { class: 'funnel-row' },
-      el('span', { class: 'fl' }, s),
-      el('div', { class: 'bar ' + (gclass[s] || '') }, el('span', { style: `width:${Math.round(n / max * 100)}%` })),
-      el('span', { class: 'fv' }, String(n))));
-  });
-  $('#dash-total-lbl').textContent = t.length + ' total';
-
-  // verdict mix
-  const vd = $('#dash-verdict'); vd.innerHTML = '';
-  const verds = [['clean_fit', 'Clean fit', 'g-ok'], ['legitimate_reach', 'Legitimate reach', 'g-warn'], ['skip', 'Skip', 'g-bad'], [null, 'Unscored', 'g-neutral']];
-  const vcount = v => t.filter(r => (r.verdict || null) === v).length;
-  const vmax = Math.max(1, ...verds.map(([v]) => vcount(v)));
-  verds.forEach(([v, label, g]) => {
-    const n = vcount(v);
-    vd.append(el('div', { class: 'funnel-row' },
-      el('span', { class: 'fl' }, label),
-      el('div', { class: 'bar ' + g }, el('span', { style: `width:${Math.round(n / vmax * 100)}%` })),
-      el('span', { class: 'fv' }, String(n))));
-  });
-
-  // recent
-  const rec = $('#dash-recent'); rec.innerHTML = '';
-  const recent = t.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 6);
-  if (!recent.length) { rec.append(el('div', { class: 'empty' }, 'No opportunities yet — validate a role to begin.')); }
-  recent.forEach(r => {
-    rec.append(el('div', { class: 'ritem' },
-      el('div', { class: 'ravatar' }, initials(r.employer)),
-      el('div', { class: 'rmain' },
-        el('div', { class: 'rtitle' }, r.title || '—'),
-        el('div', { class: 'rsub' }, r.employer + (r.location ? ' · ' + r.location : ''))),
-      statusPill(r.status)));
-  });
-
-  renderChat();
+function renderPreview() {
+  const p = $('#preview'); if (!p) return;
+  p.innerHTML = '';
+  if (state.lastDocs) return previewResume(p, state.lastDocs);
+  if (state.lastAnalysis) return previewOpinion(p, state.lastAnalysis);
+  if (state.interview && state.interview.resumeText) {
+    p.append(el('div', { class: 'pv-head' }, el('span', { class: 'pv-t' }, 'Your résumé'), el('span', { class: 'grow' }), el('span', { class: 'tag' }, state.interview.resumeName || 'attached')));
+    p.append(el('div', { class: 'small muted' }, 'Paste an opportunity and hit “Rate it” — Giggy will give you the honest read, then we tailor this.'));
+    p.append(el('div', { class: 'pv-plain', style: 'margin-top:12px' }, state.interview.resumeText.slice(0, 6000)));
+    p.append(el('div', { class: 'btnrow', style: 'margin-top:12px' }, rateBtn()));
+    return;
+  }
+  const e = el('div', { class: 'pv-empty' });
+  e.append(el('div', { class: 'pv-ic', html: IC.doc }));
+  e.append(el('div', { style: 'font-weight:650;color:var(--text)' }, 'Your preview shows up here'));
+  e.append(el('div', { class: 'small' }, 'Attach your résumé PDF and paste an opportunity on the left. Giggy gives you an honest read — the cash it’s worth and whether to go for it — then drafts a tailored, ATS-safe résumé you can save as PDF.'));
+  p.append(e);
 }
+function rateBtn() {
+  return el('button', { class: 'btn primary', onclick: rateOpportunity, disabled: (state.interview && state.interview.jd) ? null : 'true' }, ico(IC.cash), 'Rate this opportunity');
+}
+function previewOpinion(p, a) {
+  const vlabel = { clean_fit: 'Go for it', legitimate_reach: 'Worth a shot', skip: 'Skip it' }[a.verdict] || a.verdict;
+  p.append(el('div', { class: 'pv-head' },
+    el('span', { class: 'verdict-badge verdict-' + a.verdict }, el('span', { class: 'vdot' }), vlabel),
+    el('span', { class: 'grow' }),
+    el('span', { class: 'small muted' }, (a.parsed && a.parsed.company) || '')));
+  if (a.verdict_reason) p.append(el('div', { class: 'small muted', style: 'margin-top:8px' }, a.verdict_reason));
+  if (a.cash) { const s = renderCash(p, a.cash); }
+  if (a.authenticity) renderAuthenticity(p, a.authenticity);
+  const row = el('div', { class: 'btnrow', style: 'margin-top:16px' });
+  if (a.verdict !== 'skip') row.append(el('button', { class: 'btn ok', onclick: tailorResume }, ico(IC.doc), 'Tailor my résumé'));
+  row.append(el('button', { class: 'btn', onclick: () => { state.lastAnalysis = null; renderPreview(); } }, 'Back'));
+  p.append(row);
+}
+function previewResume(p, d) {
+  p.append(el('div', { class: 'pv-head' },
+    el('span', { class: 'pv-t' }, 'Tailored résumé'),
+    el('span', { class: 'grow' }),
+    el('button', { class: 'btn sm ghost', onclick: () => { state.lastDocs = null; renderPreview(); } }, 'Back to opinion')));
+  renderDocs(d, p);
+}
+
+async function rateOpportunity() {
+  const iv = state.interview || {};
+  if (!iv.jd) { toast('Add the opportunity / JD first.', true); return; }
+  if (!ready()) { toast('Connect Claude in Settings first.', true); switchTab('settings'); return; }
+  const p = $('#preview'); p.innerHTML = ''; p.append(loadingCard('Giggy is reading the opportunity against your résumé…'));
+  state.lastJD = iv.jd; state.lastDocs = null;
+  try {
+    const resume = iv.resumeText ? `\n\nThe user's current résumé:\n${iv.resumeText.slice(0, 8000)}` : '';
+    const resp = await callClaude({
+      system: buildSystemPrompt(), max_tokens: 3000,
+      tools: [FIT_TOOL], tool_choice: { type: 'tool', name: 'submit_fit_analysis' },
+      messages: [{ role: 'user', content: `Give your honest read on this opportunity for this candidate — fit, the per-opportunity cash rating (what it pays and the odds it converts), red flags, and the angle to lead with.${resume}\n\nOPPORTUNITY:\n${iv.jd}` }]
+    });
+    state.lastAnalysis = toolResult(resp, 'submit_fit_analysis');
+    renderPreview();
+    postOpinionToChat(state.lastAnalysis);
+  } catch (e) { $('#preview').innerHTML = ''; const b = el('div', { class: 'err-box' }); b.append(ico(IC.warn), document.createTextNode(' ' + friendlyErr(e))); $('#preview').append(b); }
+}
+function postOpinionToChat(a) {
+  const v = { clean_fit: 'Go for it', legitimate_reach: 'Worth a shot', skip: 'Skip it' }[a.verdict] || a.verdict;
+  const c = a.cash || {};
+  const line = `${v}. ${a.verdict_reason || ''}\n\nCash rating: ${c.potential_amount || '—'} · ${c.conversion_probability != null ? c.conversion_probability + '% to convert' : ''}. ${c.basis || ''}\n\nWant me to tailor your résumé for it? Hit “Tailor my résumé” on the right.`;
+  state.chat.push({ role: 'assistant', content: line }); save(LS.chat, state.chat); renderChat();
+}
+async function tailorResume() {
+  const a = state.lastAnalysis; if (!a) { rateOpportunity(); return; }
+  if (!ready()) { toast('Connect Claude in Settings first.', true); switchTab('settings'); return; }
+  const p = $('#preview'); p.innerHTML = ''; p.append(loadingCard('Drafting a tailored, ATS-safe résumé, then checking it against the guardrails…'));
+  const iv = state.interview || {};
+  const userMsg = `Fill the structured résumé for this opportunity. Lead frame: "${a.primary_frame}". Mirror only true keywords: ${(a.keywords || []).join(', ')}. Frame these gaps honestly, never claim them: ${(a.gaps || []).map(g => g.requirement).join('; ') || 'none'}.${iv.resumeText ? '\nUse the user\'s current résumé as raw material (still nothing beyond the canonical profile):\n' + iv.resumeText.slice(0, 8000) : ''}\n\nOPPORTUNITY:\n${iv.jd || state.lastJD}`;
+  try {
+    const resp = await callClaude({
+      system: buildSystemPrompt(), max_tokens: 8000,
+      tools: [DOC_TOOL], tool_choice: { type: 'tool', name: 'submit_documents' },
+      messages: [{ role: 'user', content: userMsg }]
+    });
+    state.lastDocs = toolResult(resp, 'submit_documents');
+    renderPreview();
+  } catch (e) { $('#preview').innerHTML = ''; const b = el('div', { class: 'err-box' }); b.append(ico(IC.warn), document.createTextNode(' ' + friendlyErr(e))); $('#preview').append(b); previewResumeBackHint(); }
+}
+function previewResumeBackHint() { $('#preview').append(el('div', { class: 'btnrow', style: 'margin-top:12px' }, el('button', { class: 'btn', onclick: renderPreview }, 'Back'))); }
 function initials(s) { return (s || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
 
 /* ============================================================================
  * Agent conversation — long-tail qualification chat (dashboard hero)
  * ==========================================================================*/
 const CHAT_CHIPS = [
-  'Interview me for the Agility TPM (Physical AI) role.',
-  'Run a general qualifying interview.',
-  'Screen me for the Apple Design Producer contract.',
-  'Give me your readiness verdict so far.'
+  'Is this one worth my time?',
+  'What is it really worth in cash?',
+  'What are the red flags here?',
+  'How should I position myself for it?'
 ];
 function chatGreeting() {
-  return { role: 'assistant', content: "I'm your Giggy agent, and this is a qualifying interview — I'll screen you for a role the way a sharp recruiter would, pressure-testing each claim until it's interview-defensible.\n\nTo start: set the job description and attach your current resume (PDF) above, then hit Begin — I'll screen you against that exact role using your resume as the baseline. Or just name the role and we'll go." };
+  return { role: 'assistant', content: "I'm Giggy — twenty years hustling contracts and freelance gigs, and I've placed a lot of people. Paste your résumé and the opportunity (a job post or a gig) and I'll give you my honest read: is it worth your time, what it's really worth in cash, and how to position you to win it. Then we sharpen the résumé together.\n\nDrop the opportunity and your résumé PDF above, or just paste them here." };
 }
 function chatSystem() {
-  const roles = state.tracker.slice(0, 40)
-    .map(r => `- ${r.title} @ ${r.employer}${r.verdict ? ' [' + prettyVerdict(r.verdict) + ']' : ''}${r.status ? ' · ' + r.status : ''}`)
-    .join('\n');
   const iv = state.interview || {};
   const inputs = `
 
-INTERVIEW INPUTS
-Target job description:
-${iv.jd ? iv.jd.slice(0, 6000) : '(not provided yet — ask the candidate to paste it or attach it, or take the role they name)'}
+INPUTS
+The opportunity (job post / gig the user posted or found):
+${iv.jd ? iv.jd.slice(0, 6000) : '(not provided yet — ask them to paste it or attach it)'}
 
-Candidate's current resume (extracted from the PDF they attached — treat it as their own prior claims to work from, but still bound by the canonical profile and the HAVE/DON'T guardrails; flag anything in it that overclaims):
-${iv.resumeText ? iv.resumeText.slice(0, 8000) : '(no resume attached yet)'}`;
+The user's current résumé (extracted from their PDF — their own prior claims to work from, still bound by the canonical profile and HAVE/DON'T guardrails; flag anything that overclaims):
+${iv.resumeText ? iv.resumeText.slice(0, 8000) : '(no résumé provided yet)'}`;
 
   return buildSystemPrompt() + inputs + `
 
-INTERVIEW MODE
-You are conducting a QUALIFYING INTERVIEW with the candidate for a specific opportunity — behave like a sharp, fair screener who knows their file cold. Run it as a real interview, not a chat:
-- Establish the target role first (ask, or take the one they name / pick from the pipeline).
-- Then work a clear arc, ONE question at a time — wait for each answer before the next:
-  1) the moat / lead angle for this role,
-  2) each hard requirement and must-have → probe for specific, interview-defensible evidence,
-  3) the gaps → ask how they'd speak to them honestly, and coach a truthful reframe,
-  4) alignment of proven ("older") skills to the role's current language.
-- Push back when an answer is vague, inflated, or over-scoped — the same way a screener would (Hummer EV = concept design; Apple = producer; SCE under Quigley-Simpson; robotics = ran the UI/delivery, not built the robot). Never invent facts or accept a DON'T-HAVE claim.
-- Track what's been covered; don't repeat. Keep each turn tight — one crisp question, or a short reaction plus the next question.
-- When you have enough, deliver a READINESS VERDICT: clean fit / legitimate reach / not yet, the two strongest proof points, the one gap to prepare, and a next step (run a full Validation or generate documents on the Validate tab).
+GIGGY — WHO YOU ARE
+You are Giggy: a veteran contractor and freelancer who has won gigs and placed people for two decades. You give honest, street-smart career advice and job placement — no fluff, no false hope, no hype. You are on the user's side, which means telling them the truth.
 
-CURRENT PIPELINE (for reference):
-${roles}`;
+WHAT YOU DO
+When the user gives an opportunity + résumé, reply with your OPINION, tight and direct:
+- Straight call: go for it, worth a quick shot, or skip — and why, in a sentence or two.
+- Cash rating for THIS opportunity: realistic cash it pays if landed (a gig/contract is usually hundreds to a few thousand dollars; use the posted pay if there is one) and an honest percent chance it converts to cash. Cut that percent hard for ghost/fake/evergreen/wired-for-an-insider postings.
+- Red flags in the posting (ghost job, fake, agency reposting, likely already-filled internally).
+- How to position them: the one angle to lead with, and the gaps to handle honestly — never invent facts or claim a DON'T-HAVE skill; scope precisely (Hummer EV = concept design; Apple = producer; SCE under Quigley-Simpson; robotics = ran the UI/delivery, not built the robot).
+Then help them work through it and update the résumé. Keep replies short and human — a few sentences or tight bullets, the way a sharp mentor talks. Ask a question back when you genuinely need one fact to give a better read.`;
 }
 
 let chatBusy = false;
@@ -1270,12 +1292,13 @@ async function onResumeFile(e) {
   }
   e.target.value = '';
   renderInterviewSetup();
+  if (onHome() && !state.lastAnalysis && !state.lastDocs) renderPreview();
 }
 function saveJD() {
   const v = $('#iv-jd').value.trim();
   state.interview.jd = v; save(LS.interview, state.interview);
   $('#iv-jd-wrap').hidden = true; renderInterviewSetup();
-  if (v) toast('Job description set.');
+  if (v) { toast('Opportunity set.'); if (ready()) rateOpportunity(); else renderPreview(); }
 }
 function renderInterviewSetup() {
   if (!$('#iv-jd-btn')) return;
@@ -1429,7 +1452,7 @@ function renderTrends() {
  * Navigation / shell
  * ==========================================================================*/
 const VIEWS = {
-  dashboard: { title: 'Dashboard', sub: 'Your job search, end to end', actions: [] },
+  dashboard: { title: 'Giggy', sub: 'Honest job-placement advice from a contracting & freelancing beast', actions: [] },
   validate:  { title: 'Validate opportunity', sub: 'Fit analysis before generation', actions: [] },
   tracker:   { title: 'Pipeline', sub: 'Every application, honestly tracked',
     actions: [
@@ -1509,7 +1532,7 @@ function init() {
   $('#iv-jd-save').addEventListener('click', saveJD);
   $('#iv-jd-cancel').addEventListener('click', () => { $('#iv-jd-wrap').hidden = true; });
   $('#iv-resume').addEventListener('change', onResumeFile);
-  $('#iv-begin').addEventListener('click', beginInterview);
+  $('#iv-begin').addEventListener('click', rateOpportunity);
   const ct = $('#chat-text');
   ct.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(ct.value); } });
   ct.addEventListener('input', () => { ct.style.height = 'auto'; ct.style.height = Math.min(ct.scrollHeight, 150) + 'px'; });

@@ -506,3 +506,23 @@ kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-3); b
 .prob-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
 .prob-dot.ok { background: var(--ok); } .prob-dot.warn { background: var(--warn); } .prob-dot.bad { background: var(--bad); }
 .stat .lbl { min-height: 1em; }
+
+/* ============================================================================
+ * Home — conversation + preview (the whole product)
+ * ==========================================================================*/
+.content.home { max-width: 1320px; }
+.home-grid { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(380px, 1.15fr); gap: 18px; align-items: stretch; }
+@media (max-width: 900px) { .home-grid { grid-template-columns: 1fr; } }
+.convo-pane { display: flex; flex-direction: column; min-height: calc(100vh - 150px); }
+.convo-pane .chat { flex: 1; margin-top: 12px; height: auto; }
+.preview-pane { min-height: calc(100vh - 150px); overflow: auto; }
+@media (max-width: 900px) { .convo-pane, .preview-pane { min-height: 0; } .convo-pane .chat { height: 460px; } }
+
+.pv-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: var(--muted); gap: 12px; padding: 30px; }
+.pv-empty .pv-ic { width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--border); display: grid; place-items: center; color: var(--brand); }
+.pv-empty .pv-ic svg { width: 22px; height: 22px; }
+.pv-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.pv-head .pv-t { font-weight: 650; font-size: 14px; }
+.pv-head .grow { flex: 1; }
+.pv-section { margin-top: 16px; }
+.pv-plain { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 18px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; max-height: 60vh; overflow: auto; font-family: Calibri, Arial, sans-serif; }
