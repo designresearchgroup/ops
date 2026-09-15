@@ -1,12 +1,13 @@
 name: Deploy to GoDaddy
 
-# CI/CD: every push to main syncs the app to GoDaddy over FTPS.
-# Only the ops/ folder is deployed, into public_html/ops/ (URL: /ops/).
+# Manual-only for now: run from the Actions tab (workflow_dispatch) once the
+# FTP secrets are set. Push-triggered deploy is disabled so commits don't fail.
+# To re-enable auto-deploy on push, uncomment the `push:` block below.
 on:
-  push:
-    branches: [main]
-    paths: ['ops/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths: ['ops/**', '.github/workflows/deploy.yml']
 
 concurrency:
   group: ftp-deploy

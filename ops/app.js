@@ -15,6 +15,7 @@ const LS = {
   chat: 'ops.chat',
   trends: 'ops.trends',
   interview: 'ops.interview',
+  template: 'ops.template',
   theme: 'ops.theme'
 };
 const API_URL = 'https://api.anthropic.com/v1/messages';
@@ -63,7 +64,8 @@ let state = {
   clarifierAnswers: {},
   chat: load(LS.chat, []),
   trends: load(LS.trends, null),
-  interview: load(LS.interview, { jd: '', resumeName: '', resumeText: '' })
+  interview: load(LS.interview, { jd: '', resumeName: '', resumeText: '' }),
+  template: load(LS.template, { a: 0, f: 0, h: 0 })
 };
 if (!state.tracker) { state.tracker = seedTracker(); save(LS.tracker, state.tracker); }
 
@@ -601,17 +603,20 @@ function renderDocs(d, container) {
   // doc tabs — real rendered previews
   const tabs = el('div', { class: 'doc-tabs', style: 'margin-top:14px' });
   const stage = el('div', { class: 'doc-stage' });
+  const styledPage = () => { const p = el('div', { class: 'resume-page styled', html: resumeHTML(r, true) }); applyTemplate(p); return p; };
   const views = [
     { key: 'ats', label: 'Résumé — ATS', build: () => el('div', { class: 'resume-page', html: resumeHTML(r, false) }) },
-    { key: 'styled', label: 'Résumé — Styled', build: () => el('div', { class: 'resume-page styled', html: resumeHTML(r, true) }) },
+    { key: 'styled', label: 'Design · ' + TEMPLATE_COUNT + '+', build: styledPage },
     { key: 'cover', label: 'Cover letter', build: () => el('div', { class: 'resume-page', html: coverHTML(d.cover_letter || '') }) }
   ];
-  let active = 'ats';
+  let active = (docActive === 'cover' && !d.cover_letter) ? 'ats' : docActive;
   const paint = () => {
-    stage.innerHTML = ''; stage.append(views.find(v => v.key === active).build());
+    stage.innerHTML = '';
+    if (active === 'styled') stage.append(templateBar());
+    stage.append(views.find(v => v.key === active).build());
     $$('.doc-tab', tabs).forEach(t => t.classList.toggle('active', t.dataset.k === active));
   };
-  views.forEach(v => { if (v.key === 'cover' && !d.cover_letter) return; tabs.append(el('button', { class: 'doc-tab', 'data-k': v.key, onclick: () => { active = v.key; paint(); } }, v.label)); });
+  views.forEach(v => { if (v.key === 'cover' && !d.cover_letter) return; tabs.append(el('button', { class: 'doc-tab', 'data-k': v.key, onclick: () => { active = v.key; docActive = v.key; paint(); } }, v.label)); });
   panel.append(tabs, stage);
 
   // actions
@@ -912,6 +917,51 @@ function copyText(t) { navigator.clipboard.writeText(t).then(() => toast('Copied
  * ATS-safe: single column, one font, plain CAPS headings, round bullets,
  * dates inline on the title/company line, " | " contact separators, no tables.
  * ==========================================================================*/
+/* ---- résumé design templates: accent × font × header = 252 combinations ---- */
+const T_ACCENTS = [
+  { n: 'Navy', c: '#1F3A4D' }, { n: 'Forest', c: '#2E5E3A' }, { n: 'Teal', c: '#0F6E6E' },
+  { n: 'Slate', c: '#37474F' }, { n: 'Charcoal', c: '#2B2B2B' }, { n: 'Burgundy', c: '#7A2E3A' },
+  { n: 'Rust', c: '#9A4A2E' }, { n: 'Bronze', c: '#7A5C2E' }, { n: 'Ink Blue', c: '#1D3A8A' },
+  { n: 'Ocean', c: '#12557A' }, { n: 'Pine', c: '#1F5145' }, { n: 'Graphite', c: '#3A3F44' },
+  { n: 'Oxblood', c: '#5E2A2A' }, { n: 'Steel', c: '#2F5A73' }
+]; // 14
+const T_FONTS = [
+  { n: 'Calibri', s: 'Calibri, Arial, sans-serif' }, { n: 'Arial', s: 'Arial, Helvetica, sans-serif' },
+  { n: 'Georgia', s: 'Georgia, "Times New Roman", serif' }, { n: 'Garamond', s: '"EB Garamond", Garamond, Georgia, serif' },
+  { n: 'Cambria', s: 'Cambria, Georgia, serif' }, { n: 'Verdana', s: 'Verdana, Geneva, sans-serif' }
+]; // 6
+const T_HEADERS = [{ n: 'rule', label: 'Rule' }, { n: 'band', label: 'Band' }, { n: 'center', label: 'Centered' }]; // 3
+const TEMPLATE_COUNT = T_ACCENTS.length * T_FONTS.length * T_HEADERS.length; // 252
+function tmpl() { const t = state.template || { a: 0, f: 0, h: 0 }; return { a: t.a % T_ACCENTS.length, f: t.f % T_FONTS.length, h: t.h % T_HEADERS.length }; }
+function templateIndex() { const t = tmpl(); return t.a * (T_FONTS.length * T_HEADERS.length) + t.f * T_HEADERS.length + t.h + 1; }
+function applyTemplate(elp) {
+  const t = tmpl();
+  elp.style.setProperty('--acc', T_ACCENTS[t.a].c);
+  elp.style.fontFamily = T_FONTS[t.f].s;
+  T_HEADERS.forEach(h => elp.classList.remove('hdr-' + h.n));
+  elp.classList.add('hdr-' + T_HEADERS[t.h].n);
+}
+let docActive = 'ats';
+function setTemplate(patch) {
+  state.template = { ...tmpl(), ...patch }; save(LS.template, state.template);
+  docActive = 'styled';
+  if (onHome()) renderPreview(); else if ($('#docs-out') && state.lastDocs) renderDocs(state.lastDocs);
+}
+function templateBar() {
+  const bar = el('div', { class: 'tmpl-bar' });
+  bar.append(el('span', { class: 'tmpl-count' }, 'Design ' + templateIndex() + ' / ' + TEMPLATE_COUNT));
+  const sw = el('div', { class: 'tmpl-swatches' });
+  T_ACCENTS.forEach((a, i) => sw.append(el('button', { class: 'tmpl-sw' + (tmpl().a === i ? ' on' : ''), title: a.n, style: 'background:' + a.c, onclick: () => setTemplate({ a: i }) })));
+  bar.append(sw);
+  const fsel = el('select', { class: 'tmpl-sel', onchange: e => setTemplate({ f: +e.target.value }) });
+  T_FONTS.forEach((f, i) => fsel.append(el('option', { value: i, ...(tmpl().f === i ? { selected: '' } : {}) }, f.n)));
+  const hsel = el('select', { class: 'tmpl-sel', onchange: e => setTemplate({ h: +e.target.value }) });
+  T_HEADERS.forEach((h, i) => hsel.append(el('option', { value: i, ...(tmpl().h === i ? { selected: '' } : {}) }, h.label)));
+  bar.append(fsel, hsel);
+  bar.append(el('button', { class: 'btn sm ghost', title: 'Shuffle', onclick: () => setTemplate({ a: Math.floor(Math.random() * T_ACCENTS.length), f: Math.floor(Math.random() * T_FONTS.length), h: Math.floor(Math.random() * T_HEADERS.length) }) }, 'Shuffle'));
+  return bar;
+}
+
 // Workday-safe: middle-dot separators, never pipes.
 function contactLine(c) {
   return [c.location, c.phone, c.email, c.portfolio, c.linkedin].map(s => (s || '').trim()).filter(Boolean).join('  ·  ');
@@ -1033,14 +1083,24 @@ const PRINT_CSS = `
   .cl-meta { color:#333; font-size:9.6pt; margin:10pt 0 12pt; }
   .cl-body p { margin:7pt 0; }
 `;
-const STYLED_CSS = `
-  .name { color:#1F3A4D; }
-  .ttl { color:#2E7D5B; }
-  h2.sec { color:#1F3A4D; border-bottom:1.25pt solid #2E7D5B; padding-bottom:2pt; }
-  .exp-stack .et strong { color:#1F3A4D; }
-`;
+function styledCSS() {
+  const t = tmpl(); const acc = T_ACCENTS[t.a].c; const font = T_FONTS[t.f].s; const h = T_HEADERS[t.h].n;
+  let head = '';
+  if (h === 'rule') head = `h2.sec { border-bottom:1.25pt solid ${acc}; padding-bottom:2pt; }`;
+  else if (h === 'band') head = `.rhead { background:${acc}; padding:10pt 12pt; margin:0 0 10pt; }
+    .rhead .name, .rhead .ttl, .rhead .contact { color:#fff; }`;
+  else if (h === 'center') head = `.rhead { text-align:center; } h2.sec { border-bottom:1.25pt solid ${acc}; padding-bottom:2pt; }`;
+  return `
+    body { font-family:${font}; }
+    .name { color:${acc}; }
+    .ttl { color:${acc}; opacity:.82; }
+    h2.sec { color:${acc}; }
+    .exp-stack .et strong { color:${acc}; }
+    ${head}
+  `;
+}
 function printHTML(title, bodyHTML, styled) {
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_CSS}${styled ? STYLED_CSS : ''}</style></head><body>${bodyHTML}</body></html>`;
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_CSS}${styled ? styledCSS() : ''}</style></head><body>${bodyHTML}</body></html>`;
   let f = document.getElementById('print-frame');
   if (f) f.remove();
   f = document.createElement('iframe');
